@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The name of the private folder on this computer that holds the API key. -->
+    <UserSecretsId>ships-mesh-simulator</UserSecretsId>
+  </PropertyGroup>
+
+</Project>

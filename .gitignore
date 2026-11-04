@@ -1,0 +1,17 @@
+# Build output
+bin/
+obj/
+*.user
+
+# Editor settings
+.vs/
+.vscode/
+
+# Secrets: the API key must never be committed
+.env
+secrets.json
+appsettings.Development.json
+
+# Private interview notes, not part of the public project
+ship-mesh-project-handoff.md
+ship_mesh_network_topology.png
