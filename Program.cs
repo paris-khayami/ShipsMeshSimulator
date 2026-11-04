@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Options;
 using ShipsMeshSimulator.Ais;
+using ShipsMeshSimulator.Mesh;
 using ShipsMeshSimulator.Ships;
 
 // Always print numbers as 53.5467, even on a computer set to German (53,5467).
@@ -15,6 +16,7 @@ builder.Configuration.AddUserSecrets<Program>(optional: true);
 // Copy settings from appsettings.json into these classes.
 builder.Services.Configure<AisStreamOptions>(builder.Configuration.GetSection("AisStream"));
 builder.Services.Configure<TrackingOptions>(builder.Configuration.GetSection("Tracking"));
+builder.Services.Configure<MeshOptions>(builder.Configuration.GetSection("Mesh"));
 
 // Singleton means the whole app shares one ShipTracker, so every part sees the same ships.
 builder.Services.AddSingleton<ShipTracker>();

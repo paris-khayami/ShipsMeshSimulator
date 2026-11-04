@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
+using ShipsMeshSimulator.Mesh;
 
 namespace ShipsMeshSimulator.Ships;
 
 /// <summary>
-/// On a timer, removes ships that have stopped reporting and sends the rest to every browser.
+/// On a timer, removes ships that have stopped reporting, works out the simulated radio links,
+/// and sends the result to every browser.
 /// </summary>
 public sealed class ShipBroadcaster : BackgroundService
 {
@@ -15,17 +17,26 @@ public sealed class ShipBroadcaster : BackgroundService
     private readonly ShipTracker _tracker;
     private readonly IHubContext<ShipHub> _hub;
     private readonly TrackingOptions _options;
+    private readonly MeshOptions _meshOptions;
+    private readonly ShoreStation _shore;
     private readonly ILogger<ShipBroadcaster> _logger;
 
     public ShipBroadcaster(
         ShipTracker tracker,
         IHubContext<ShipHub> hub,
         IOptions<TrackingOptions> options,
+        IOptions<MeshOptions> meshOptions,
         ILogger<ShipBroadcaster> logger)
     {
         _tracker = tracker;
         _hub = hub;
         _options = options.Value;
+        _meshOptions = meshOptions.Value;
+        _shore = new ShoreStation(
+            ShoreStation.NodeId,
+            _meshOptions.ShoreName,
+            _meshOptions.ShoreLatitude,
+            _meshOptions.ShoreLongitude);
         _logger = logger;
     }
 
@@ -41,7 +52,12 @@ public sealed class ShipBroadcaster : BackgroundService
                 _tracker.RemoveStale(DateTimeOffset.UtcNow, maxAge);
 
                 IReadOnlyList<Ship> ships = _tracker.GetAll();
-                var update = new ShipsUpdate(ships.Count, SelectShipsForMap(ships));
+                IReadOnlyList<Ship> shipsOnMap = SelectShipsForMap(ships);
+                IReadOnlyList<RadioLink> links = RadioLinkCalculator.FindLinks(
+                    shipsOnMap, _shore, _meshOptions.RadioRangeKm);
+
+                var update = new ShipsUpdate(
+                    ships.Count, shipsOnMap, _shore, links, _meshOptions.RadioRangeKm);
 
                 try
                 {

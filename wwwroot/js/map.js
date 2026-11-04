@@ -6,17 +6,25 @@ const GLYPH = `<svg class="ship-glyph" viewBox="0 0 28 28" aria-hidden="true">
   <circle class="moored" cx="14" cy="14" r="5"/>
 </svg>`;
 
+const SHORE_GLYPH = `<svg class="ship-glyph" viewBox="0 0 28 28" aria-hidden="true">
+  <rect class="shore" x="7" y="7" width="14" height="14"/>
+</svg>`;
+
 // AIS uses these values to mean "not available".
 const SPEED_UNAVAILABLE = 102;
 const COURSE_UNAVAILABLE = 360;
 const MOVING_SPEED_KNOTS = 1;
 const STALE_AFTER_SECONDS = 120;
+const LINK_COLOR = "#b0127a";
 
 const map = L.map("map");
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 }).addTo(map);
+
+// Lines are drawn in this group so they can all be replaced together.
+const linkLayer = L.layerGroup().addTo(map);
 
 // Everything the page currently knows about, looked up by MMSI.
 const markers = new Map();
@@ -25,6 +33,9 @@ let ships = new Map();
 let selectedMmsi = null;
 let connected = false;
 let listOrder = "";
+let links = [];
+let shore = null;
+let shoreMarker = null;
 
 const element = (id) => document.getElementById(id);
 
@@ -111,6 +122,50 @@ function removeShip(mmsi) {
   }
 }
 
+// The shore station never moves, so its marker is only created once.
+function updateShoreMarker() {
+  if (shoreMarker) {
+    return;
+  }
+
+  shoreMarker = L.marker([shore.latitude, shore.longitude], {
+    icon: L.divIcon({ className: "ship-marker", html: SHORE_GLYPH, iconSize: [28, 28], iconAnchor: [14, 14] }),
+    title: shore.name,
+  }).addTo(map);
+}
+
+// Finds where a link's end is, whether that's a ship or the shore station.
+function nodePosition(id) {
+  const node = id === shore.id ? shore : ships.get(id);
+  return node ? [node.latitude, node.longitude] : null;
+}
+
+// Redraw every link. A stronger signal gets a thicker, more solid line.
+function renderLinks() {
+  linkLayer.clearLayers();
+
+  for (const link of links) {
+    const from = nodePosition(link.nodeA);
+    const to = nodePosition(link.nodeB);
+    if (!from || !to) {
+      continue;
+    }
+
+    const isSelected = link.nodeA === selectedMmsi || link.nodeB === selectedMmsi;
+    const strength = link.signalPercent / 100;
+    L.polyline([from, to], {
+      color: LINK_COLOR,
+      weight: isSelected ? 4 : 1 + 2 * strength,
+      opacity: isSelected ? 1 : 0.3 + 0.5 * strength,
+      interactive: false,
+    }).addTo(linkLayer);
+  }
+}
+
+function countLinks(mmsi) {
+  return links.filter((link) => link.nodeA === mmsi || link.nodeB === mmsi).length;
+}
+
 function renderSelection() {
   const ship = ships.get(selectedMmsi);
   element("selected").hidden = !ship;
@@ -123,6 +178,7 @@ function renderSelection() {
   element("selected-speed").textContent = formatSpeed(ship);
   element("selected-course").textContent = formatCourse(ship);
   element("selected-position").textContent = `${ship.latitude.toFixed(4)}, ${ship.longitude.toFixed(4)}`;
+  element("selected-links").textContent = countLinks(ship.mmsi);
 }
 
 function selectShip(mmsi) {
@@ -131,6 +187,7 @@ function selectShip(mmsi) {
     updateMarker(ship);
     updateRow(ship);
   });
+  renderLinks();
   renderSelection();
 }
 
@@ -164,6 +221,11 @@ function applyUpdate(update) {
   });
 
   ships = next;
+  links = update.links;
+  shore = update.shore;
+  updateShoreMarker();
+  renderLinks();
+
   ships.forEach((ship) => {
     updateMarker(ship);
     updateRow(ship);
@@ -181,6 +243,8 @@ function applyUpdate(update) {
   element("ship-count").textContent = ships.size === 0
     ? "No ships yet."
     : `Showing ${ships.size} of ${update.totalTracked} ships, moving ships first.`;
+  element("link-count").textContent =
+    `${links.length} simulated radio links, with a range of ${update.radioRangeKm} km.`;
 
   renderSelection();
   renderStatus();

@@ -23,8 +23,16 @@
       <p class="summary">
         <span id="ship-count">No ships yet.</span>
         <span id="latest-report"></span>
+        <span id="link-count"></span>
       </p>
-      <p class="source">Positions are live AIS reports from aisstream.io.</p>
+      <p class="source">Ship positions are live AIS reports from aisstream.io. Radio links are simulated from the real distances between ships.</p>
+
+      <ul class="legend">
+        <li><svg viewBox="0 0 28 28" aria-hidden="true"><path class="hull" d="M14 3 L21 24 L14 20 L7 24 Z"/></svg>Moving ship</li>
+        <li><svg viewBox="0 0 28 28" aria-hidden="true"><circle class="legend-moored" cx="14" cy="14" r="5"/></svg>Stopped ship</li>
+        <li><svg viewBox="0 0 28 28" aria-hidden="true"><rect class="shore" x="7" y="7" width="14" height="14"/></svg>Shore station</li>
+        <li><svg viewBox="0 0 28 28" aria-hidden="true"><line class="legend-link" x1="2" y1="14" x2="26" y2="14"/></svg>Simulated radio link</li>
+      </ul>
 
       <section id="selected" class="selected" hidden aria-live="polite">
         <div class="selected-title">
@@ -36,6 +44,7 @@
           <div><dt>Speed</dt><dd id="selected-speed"></dd></div>
           <div><dt>Course</dt><dd id="selected-course"></dd></div>
           <div><dt>Position</dt><dd id="selected-position"></dd></div>
+          <div><dt>Radio links</dt><dd id="selected-links"></dd></div>
         </dl>
       </section>
 

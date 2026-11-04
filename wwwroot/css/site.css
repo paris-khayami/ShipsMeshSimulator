@@ -8,6 +8,7 @@
   --buoy-red: #c4122f;
   --buoy-green: #14764f;
   --amber: #8a5a00;
+  --chart-magenta: #b0127a;
 }
 
 * {
@@ -100,10 +101,49 @@ h1 {
 }
 
 #latest-report,
+#link-count,
 .source {
   color: var(--ink-soft);
   font-size: 1rem;
   font-weight: 400;
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.125rem 0.75rem;
+  margin: 0.75rem 0 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.legend svg {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.legend-moored {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+.legend-link {
+  stroke: var(--chart-magenta);
+  stroke-width: 3;
+}
+
+.shore {
+  fill: var(--chart-magenta);
+  stroke: #fff;
+  stroke-width: 1.5;
 }
 
 .selected {
