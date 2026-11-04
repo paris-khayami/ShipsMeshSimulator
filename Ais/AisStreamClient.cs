@@ -1,11 +1,12 @@
 using System.Net.WebSockets;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using ShipsMeshSimulator.Ships;
 
 namespace ShipsMeshSimulator.Ais;
 
 /// <summary>
-/// Keeps a live connection to aisstream.io and prints each ship position it receives.
+/// Keeps a live connection to aisstream.io and passes each ship position to the ShipTracker.
 /// BackgroundService means this runs alongside the rest of the app until the app stops.
 /// </summary>
 public sealed class AisStreamClient : BackgroundService
@@ -23,6 +24,7 @@ public sealed class AisStreamClient : BackgroundService
     private readonly AisStreamOptions _options;
     private readonly ILogger<AisStreamClient> _logger;
     private readonly IHostApplicationLifetime _lifetime;
+    private readonly ShipTracker _tracker;
 
     // How many connection attempts have failed in a row.
     private int _failedAttempts;
@@ -30,11 +32,13 @@ public sealed class AisStreamClient : BackgroundService
     public AisStreamClient(
         IOptions<AisStreamOptions> options,
         ILogger<AisStreamClient> logger,
-        IHostApplicationLifetime lifetime)
+        IHostApplicationLifetime lifetime,
+        ShipTracker tracker)
     {
         _options = options.Value;
         _logger = logger;
         _lifetime = lifetime;
+        _tracker = tracker;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -119,7 +123,7 @@ public sealed class AisStreamClient : BackgroundService
             else if (envelope is not null)
             {
                 _failedAttempts = 0; // Data is flowing, so the connection is healthy.
-                PrintShipPosition(envelope);
+                TrackShip(envelope);
             }
         }
 
@@ -196,7 +200,8 @@ public sealed class AisStreamClient : BackgroundService
         }
     }
 
-    private static void PrintShipPosition(AisEnvelope envelope)
+    /// <summary>Turns a feed message into a Ship and gives it to the tracker.</summary>
+    private void TrackShip(AisEnvelope envelope)
     {
         PositionReport? report = envelope.Message?.PositionReport;
         AisMetaData? metaData = envelope.MetaData;
@@ -208,30 +213,15 @@ public sealed class AisStreamClient : BackgroundService
             return;
         }
 
-        // Ship names are padded with spaces and are sometimes empty.
-        string name = metaData.ShipName?.Trim() ?? "";
-        if (name.Length == 0)
-        {
-            name = "(no name)";
-        }
-
-        // Compare these two times to see how far the feed lags behind the current time.
-        string receivedUtc = DateTime.UtcNow.ToString("HH:mm:ss");
-        string reportedUtc = GetTimeOfDay(metaData.TimeUtc);
-
-        Console.WriteLine(
-            $"received {receivedUtc} | reported {reportedUtc} | {name,-24} | MMSI {metaData.MMSI} | " +
-            $"{report.Latitude,8:F4}, {report.Longitude,8:F4} | {report.Sog,4:F1} kn | {report.Cog,5:F1} deg");
-    }
-
-    /// <summary>Gets "11:40:02" from a time like "2026-11-04 11:40:02.123456 +0000 UTC".</summary>
-    private static string GetTimeOfDay(string? time)
-    {
-        const int start = 11;
-        const int length = 8;
-        return time is not null && time.Length >= start + length
-            ? time.Substring(start, length)
-            : "unknown ";
+        _tracker.Update(new Ship(
+            Mmsi: metaData.MMSI,
+            // Ship names are padded with spaces and are sometimes empty.
+            Name: metaData.ShipName?.Trim() ?? "",
+            Latitude: report.Latitude,
+            Longitude: report.Longitude,
+            SpeedKnots: report.Sog,
+            CourseDegrees: report.Cog,
+            LastSeenUtc: DateTimeOffset.UtcNow));
     }
 
     /// <summary>

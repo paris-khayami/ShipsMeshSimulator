@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace ShipsMeshSimulator.Ais;
 
 // These classes match the shape of the JSON that aisstream.io sends:
@@ -23,9 +21,6 @@ public sealed class AisMetaData
 {
     public long MMSI { get; set; }
     public string? ShipName { get; set; }
-
-    [JsonPropertyName("time_utc")]
-    public string? TimeUtc { get; set; }
 }
 
 public sealed class AisBody
