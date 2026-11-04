@@ -16,7 +16,7 @@ It will show live ships on a map. Each ship acts as an emulated mesh node, passi
 
 - [x] Milestone 1, Connect: print live ship positions in the terminal
 - [x] Milestone 2, Track: keep each ship's latest position and remove stale ships
-- [ ] Milestone 3, Map: show ships on a live map
+- [x] Milestone 3, Map: show ships on a live map
 - [ ] Milestone 4, Link: draw links between ships in range
 - [ ] Milestone 5, Relay: pass messages hop by hop
 - [ ] Milestone 6, Recover: kill a node and reroute
@@ -33,7 +33,7 @@ Save your key privately. This stores it outside the project, so it can't be comm
 dotnet user-secrets set "AisStream:ApiKey" "YOUR_KEY"
 ```
 
-Then start the app. Press `Ctrl+C` to stop it.
+Then start the app and open <http://localhost:5000> in your browser. Press `Ctrl+C` in the terminal to stop it.
 
 ```
 dotnet run

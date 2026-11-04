@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elbe Ship Traffic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <main class="layout">
+    <div id="map" role="application" aria-label="Map of ships on the Elbe"></div>
+
+    <aside class="panel">
+      <header class="panel-header">
+        <h1>Elbe ship traffic</h1>
+        <p id="connection" class="connection" data-state="connecting" role="status">Connecting to the server</p>
+      </header>
+
+      <p class="summary">
+        <span id="ship-count">No ships yet.</span>
+        <span id="latest-report"></span>
+      </p>
+      <p class="source">Positions are live AIS reports from aisstream.io.</p>
+
+      <section id="selected" class="selected" hidden aria-live="polite">
+        <div class="selected-title">
+          <h2 id="selected-name"></h2>
+          <button id="clear-selection" type="button">Close</button>
+        </div>
+        <dl>
+          <div><dt>MMSI</dt><dd id="selected-mmsi"></dd></div>
+          <div><dt>Speed</dt><dd id="selected-speed"></dd></div>
+          <div><dt>Course</dt><dd id="selected-course"></dd></div>
+          <div><dt>Position</dt><dd id="selected-position"></dd></div>
+        </dl>
+      </section>
+
+      <h2 class="list-title">Ships on the map</h2>
+      <p id="empty-message" class="empty">Waiting for ship reports. If none appear within a minute, check the terminal for errors.</p>
+      <ul id="ship-list" class="ship-list"></ul>
+    </aside>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+  <script src="js/map.js"></script>
+</body>
+</html>
