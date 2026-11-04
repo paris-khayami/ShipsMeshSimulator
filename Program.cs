@@ -20,6 +20,7 @@ builder.Services.Configure<MeshOptions>(builder.Configuration.GetSection("Mesh")
 
 // Singleton means the whole app shares one ShipTracker, so every part sees the same ships.
 builder.Services.AddSingleton<ShipTracker>();
+builder.Services.AddSingleton<MeshNetwork>();
 
 // SignalR keeps a live connection open so the server can push updates to the browser.
 builder.Services.AddSignalR();
@@ -27,6 +28,7 @@ builder.Services.AddSignalR();
 // Run these in the background for as long as the app is running.
 builder.Services.AddHostedService<AisStreamClient>();
 builder.Services.AddHostedService<ShipBroadcaster>();
+builder.Services.AddHostedService(services => services.GetRequiredService<MeshNetwork>());
 
 var app = builder.Build();
 

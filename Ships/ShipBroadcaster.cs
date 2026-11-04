@@ -19,6 +19,7 @@ public sealed class ShipBroadcaster : BackgroundService
     private readonly TrackingOptions _options;
     private readonly MeshOptions _meshOptions;
     private readonly ShoreStation _shore;
+    private readonly MeshNetwork _network;
     private readonly ILogger<ShipBroadcaster> _logger;
 
     public ShipBroadcaster(
@@ -26,12 +27,14 @@ public sealed class ShipBroadcaster : BackgroundService
         IHubContext<ShipHub> hub,
         IOptions<TrackingOptions> options,
         IOptions<MeshOptions> meshOptions,
+        MeshNetwork network,
         ILogger<ShipBroadcaster> logger)
     {
         _tracker = tracker;
         _hub = hub;
         _options = options.Value;
         _meshOptions = meshOptions.Value;
+        _network = network;
         _shore = new ShoreStation(
             ShoreStation.NodeId,
             _meshOptions.ShoreName,
@@ -56,8 +59,10 @@ public sealed class ShipBroadcaster : BackgroundService
                 IReadOnlyList<RadioLink> links = RadioLinkCalculator.FindLinks(
                     shipsOnMap, _shore, _meshOptions.RadioRangeKm);
 
+                _network.Sync(shipsOnMap, _shore, links);
+
                 var update = new ShipsUpdate(
-                    ships.Count, shipsOnMap, _shore, links, _meshOptions.RadioRangeKm);
+                    ships.Count, shipsOnMap, _shore, links, _network.GetRoutes(), _meshOptions.RadioRangeKm);
 
                 try
                 {

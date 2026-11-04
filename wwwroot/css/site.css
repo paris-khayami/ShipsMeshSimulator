@@ -50,6 +50,7 @@ p {
   flex-direction: column;
   min-height: 0;
   padding: 1.25rem 0 0;
+  overflow-y: auto;
   border-left: 2px solid var(--ink);
 }
 
@@ -140,6 +141,17 @@ h1 {
   stroke-width: 3;
 }
 
+.legend-route {
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-dasharray: 5 4;
+}
+
+.legend-message {
+  stroke: var(--buoy-red);
+  stroke-width: 5;
+}
+
 .shore {
   fill: var(--chart-magenta);
   stroke: #fff;
@@ -200,6 +212,46 @@ h1 {
   font-weight: 500;
 }
 
+#send-message {
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: 0.75rem;
+  border: 0;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#send-message:hover {
+  background: var(--sea-deep);
+}
+
+.message-status {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.message-status:empty {
+  display: none;
+}
+
+.message-status[data-state="sending"],
+.message-status[data-state="delivered"],
+.message-status[data-state="failed"] {
+  padding-block: 0.75rem;
+}
+
+.message-status[data-state="delivered"] {
+  color: var(--buoy-green);
+}
+
+.message-status[data-state="failed"] {
+  color: var(--buoy-red);
+}
+
 .list-title {
   margin-top: 1.25rem;
   padding-bottom: 0.5rem;
@@ -218,11 +270,9 @@ h1 {
 }
 
 .panel > .ship-list {
-  flex: 1;
-  min-height: 0;
+  flex: 1 0 auto;
   margin: 0;
   padding: 0;
-  overflow-y: auto;
   list-style: none;
 }
 
@@ -318,10 +368,7 @@ button:focus-visible {
   }
 
   .panel {
+    overflow-y: visible;
     border-left: 0;
-  }
-
-  .panel > .ship-list {
-    overflow: visible;
   }
 }

@@ -8,4 +8,5 @@ public sealed record ShipsUpdate(
     IReadOnlyList<Ship> Ships,
     ShoreStation Shore,
     IReadOnlyList<RadioLink> Links,
+    IReadOnlyList<NodeRoute> Routes,
     double RadioRangeKm);

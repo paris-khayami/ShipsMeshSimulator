@@ -16,6 +16,9 @@ const COURSE_UNAVAILABLE = 360;
 const MOVING_SPEED_KNOTS = 1;
 const STALE_AFTER_SECONDS = 120;
 const LINK_COLOR = "#b0127a";
+const ROUTE_COLOR = "#12324a";
+const MESSAGE_COLOR = "#c4122f";
+const CLEAR_MESSAGE_AFTER_MS = 6000;
 
 const map = L.map("map");
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -25,6 +28,8 @@ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 // Lines are drawn in this group so they can all be replaced together.
 const linkLayer = L.layerGroup().addTo(map);
+const routeLayer = L.layerGroup().addTo(map);
+const messageLayer = L.layerGroup().addTo(map);
 
 // Everything the page currently knows about, looked up by MMSI.
 const markers = new Map();
@@ -36,6 +41,9 @@ let listOrder = "";
 let links = [];
 let shore = null;
 let shoreMarker = null;
+let routes = new Map();
+let currentMessageId = null;
+let clearMessageTimer = null;
 
 const element = (id) => document.getElementById(id);
 
@@ -162,6 +170,103 @@ function renderLinks() {
   }
 }
 
+// Follow each ship's "next hop" to draw the route the selected ship would use right now.
+function renderRoute() {
+  routeLayer.clearLayers();
+
+  const points = [];
+  const visited = new Set();
+  let id = selectedMmsi;
+
+  while (id !== null && id !== undefined && !visited.has(id)) {
+    const position = nodePosition(id);
+    if (!position) {
+      break;
+    }
+    points.push(position);
+    visited.add(id);
+    id = routes.get(id)?.nextHopId;
+  }
+
+  if (points.length > 1) {
+    L.polyline(points, { color: ROUTE_COLOR, weight: 4, dashArray: "8 8", interactive: false }).addTo(routeLayer);
+  }
+}
+
+function nodeName(id) {
+  if (id === shore?.id) {
+    return shore.name;
+  }
+  const ship = ships.get(id);
+  return ship ? displayName(ship) : `Ship ${id}`;
+}
+
+function setMessageStatus(text, state) {
+  const status = element("message-status");
+  status.textContent = text;
+  status.dataset.state = state;
+}
+
+function clearMessageLater() {
+  clearTimeout(clearMessageTimer);
+  clearMessageTimer = setTimeout(() => messageLayer.clearLayers(), CLEAR_MESSAGE_AFTER_MS);
+}
+
+function onMessageHop(hop) {
+  // A message from another open page, or an older one, shouldn't confuse this display.
+  if (currentMessageId === null) {
+    currentMessageId = hop.messageId;
+  }
+  if (hop.messageId !== currentMessageId) {
+    return;
+  }
+
+  const from = nodePosition(hop.fromId);
+  const to = nodePosition(hop.toId);
+  if (from && to) {
+    L.polyline([from, to], { color: MESSAGE_COLOR, weight: 6, interactive: false }).addTo(messageLayer);
+  }
+  setMessageStatus(`Passing from ${nodeName(hop.fromId)} to ${nodeName(hop.toId)}`, "sending");
+}
+
+function onMessageDelivered(result) {
+  if (result.messageId !== currentMessageId) {
+    return;
+  }
+
+  const hops = result.path.length - 1;
+  const route = result.path.map(nodeName).join(", then ");
+  setMessageStatus(`Delivered in ${hops} ${hops === 1 ? "hop" : "hops"}: ${route}`, "delivered");
+  currentMessageId = null;
+  clearMessageLater();
+}
+
+function onMessageDropped(result) {
+  if (currentMessageId !== null && result.messageId !== currentMessageId) {
+    return;
+  }
+
+  setMessageStatus(`Not delivered. ${result.reason}`, "failed");
+  currentMessageId = null;
+  clearMessageLater();
+}
+
+async function sendMessage() {
+  clearTimeout(clearMessageTimer);
+  messageLayer.clearLayers();
+  currentMessageId = null;
+  setMessageStatus(`Sending from ${nodeName(selectedMmsi)}`, "sending");
+
+  try {
+    const accepted = await connection.invoke("SendTestMessage", selectedMmsi);
+    if (!accepted) {
+      setMessageStatus("Not sent. This ship is no longer on the map.", "failed");
+    }
+  } catch {
+    setMessageStatus("Not sent. The connection to the server was lost.", "failed");
+  }
+}
+
 function countLinks(mmsi) {
   return links.filter((link) => link.nodeA === mmsi || link.nodeB === mmsi).length;
 }
@@ -179,6 +284,11 @@ function renderSelection() {
   element("selected-course").textContent = formatCourse(ship);
   element("selected-position").textContent = `${ship.latitude.toFixed(4)}, ${ship.longitude.toFixed(4)}`;
   element("selected-links").textContent = countLinks(ship.mmsi);
+
+  const hops = routes.get(ship.mmsi)?.hopsToShore;
+  element("selected-route").textContent = hops === null || hops === undefined
+    ? "No route"
+    : `${hops} ${hops === 1 ? "hop" : "hops"}`;
 }
 
 function selectShip(mmsi) {
@@ -188,6 +298,7 @@ function selectShip(mmsi) {
     updateRow(ship);
   });
   renderLinks();
+  renderRoute();
   renderSelection();
 }
 
@@ -223,8 +334,10 @@ function applyUpdate(update) {
   ships = next;
   links = update.links;
   shore = update.shore;
+  routes = new Map(update.routes.map((route) => [route.nodeId, route]));
   updateShoreMarker();
   renderLinks();
+  renderRoute();
 
   ships.forEach((ship) => {
     updateMarker(ship);
@@ -271,6 +384,9 @@ const connection = new signalR.HubConnectionBuilder()
   .build();
 
 connection.on("ShipsUpdated", applyUpdate);
+connection.on("MessageHop", onMessageHop);
+connection.on("MessageDelivered", onMessageDelivered);
+connection.on("MessageDropped", onMessageDropped);
 
 function setConnected(value) {
   connected = value;
@@ -291,6 +407,7 @@ async function startConnection() {
 }
 
 element("clear-selection").addEventListener("click", () => selectShip(null));
+element("send-message").addEventListener("click", sendMessage);
 map.on("click", () => selectShip(null));
 
 // Keep "Latest report" counting even between updates.

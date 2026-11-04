@@ -25,13 +25,15 @@
         <span id="latest-report"></span>
         <span id="link-count"></span>
       </p>
-      <p class="source">Ship positions are live AIS reports from aisstream.io. Radio links are simulated from the real distances between ships.</p>
+      <p class="source">Ship positions are live AIS reports from aisstream.io. Radio links, routes, and messages are simulated using the real distances between ships.</p>
 
       <ul class="legend">
         <li><svg viewBox="0 0 28 28" aria-hidden="true"><path class="hull" d="M14 3 L21 24 L14 20 L7 24 Z"/></svg>Moving ship</li>
         <li><svg viewBox="0 0 28 28" aria-hidden="true"><circle class="legend-moored" cx="14" cy="14" r="5"/></svg>Stopped ship</li>
         <li><svg viewBox="0 0 28 28" aria-hidden="true"><rect class="shore" x="7" y="7" width="14" height="14"/></svg>Shore station</li>
         <li><svg viewBox="0 0 28 28" aria-hidden="true"><line class="legend-link" x1="2" y1="14" x2="26" y2="14"/></svg>Simulated radio link</li>
+        <li><svg viewBox="0 0 28 28" aria-hidden="true"><line class="legend-route" x1="2" y1="14" x2="26" y2="14"/></svg>Current route to shore</li>
+        <li><svg viewBox="0 0 28 28" aria-hidden="true"><line class="legend-message" x1="2" y1="14" x2="26" y2="14"/></svg>Message path</li>
       </ul>
 
       <section id="selected" class="selected" hidden aria-live="polite">
@@ -45,8 +47,12 @@
           <div><dt>Course</dt><dd id="selected-course"></dd></div>
           <div><dt>Position</dt><dd id="selected-position"></dd></div>
           <div><dt>Radio links</dt><dd id="selected-links"></dd></div>
+          <div><dt>Route to shore</dt><dd id="selected-route"></dd></div>
         </dl>
+        <button id="send-message" type="button">Send message to shore</button>
       </section>
+
+      <p id="message-status" class="message-status" role="status"></p>
 
       <h2 class="list-title">Ships on the map</h2>
       <p id="empty-message" class="empty">Waiting for ship reports. If none appear within a minute, check the terminal for errors.</p>
