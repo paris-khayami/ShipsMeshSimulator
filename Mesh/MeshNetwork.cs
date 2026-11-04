@@ -14,6 +14,10 @@ public sealed class MeshNetwork : BackgroundService, IMeshRadio
     private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(1);
 
     private readonly ConcurrentDictionary<long, MeshNode> _nodes = new();
+
+    // Ships the person has killed. They stay on the map, but their radios are off.
+    private readonly ConcurrentDictionary<long, bool> _killed = new();
+
     private readonly IHubContext<ShipHub> _hub;
     private readonly ILogger<MeshNetwork> _logger;
     private readonly TimeSpan _hopDelay;
@@ -61,6 +65,30 @@ public sealed class MeshNetwork : BackgroundService, IMeshRadio
         }
     }
 
+    public bool IsKilled(long id) => _killed.ContainsKey(id);
+
+    public IReadOnlyList<long> GetKilledIds() => _killed.Keys.ToList();
+
+    /// <summary>Turns off a ship's radio. Nobody tells its neighbors: they have to notice.</summary>
+    public void KillNode(long id)
+    {
+        if (id == ShoreStation.NodeId)
+        {
+            return;
+        }
+
+        _killed[id] = true;
+        if (_nodes.TryRemove(id, out MeshNode? node))
+        {
+            node.Stop();
+        }
+    }
+
+    /// <summary>Turns a ship's radio back on. It rejoins the network at the next update.</summary>
+    public void RestoreNode(long id) => _killed.TryRemove(id, out _);
+
+    public void RestoreAllNodes() => _killed.Clear();
+
     public IReadOnlyList<NodeRoute> GetRoutes() => _nodes.Values.Select(node => node.Route).ToList();
 
     /// <summary>Starts a message from a ship. Returns false if that ship isn't in the network.</summary>
@@ -93,7 +121,8 @@ public sealed class MeshNetwork : BackgroundService, IMeshRadio
 
     public bool Transmit(long fromId, long toId, DataMessage message)
     {
-        bool inRange = _neighbors.TryGetValue(fromId, out Dictionary<long, double>? neighbors)
+        bool inRange = _nodes.ContainsKey(toId)
+            && _neighbors.TryGetValue(fromId, out Dictionary<long, double>? neighbors)
             && neighbors.ContainsKey(toId);
 
         if (!inRange)
@@ -102,7 +131,7 @@ public sealed class MeshNetwork : BackgroundService, IMeshRadio
         }
 
         _ = PublishAsync("MessageHop", new MessageHop(message.MessageId, fromId, toId));
-        _ = DeliverAfterDelayAsync(toId, message);
+        _ = DeliverAfterDelayAsync(fromId, toId, message);
         return true;
     }
 
@@ -155,7 +184,7 @@ public sealed class MeshNetwork : BackgroundService, IMeshRadio
 
     private void AddNodeIfNew(long id, bool isShore)
     {
-        if (_nodes.ContainsKey(id))
+        if (_nodes.ContainsKey(id) || _killed.ContainsKey(id))
         {
             return;
         }
@@ -168,16 +197,25 @@ public sealed class MeshNetwork : BackgroundService, IMeshRadio
     }
 
     /// <summary>Waits before delivering, so each hop takes time and can be seen on the map.</summary>
-    private async Task DeliverAfterDelayAsync(long toId, DataMessage message)
+    private async Task DeliverAfterDelayAsync(long fromId, long toId, DataMessage message)
     {
         await Task.Delay(_hopDelay);
 
         bool delivered = _nodes.TryGetValue(toId, out MeshNode? node)
             && node.Post(new DataReceived(message));
 
-        if (!delivered)
+        if (delivered)
         {
-            ReportDropped(message, toId, "The next ship left the network before the message arrived.");
+            return;
+        }
+
+        // The next ship disappeared while the message was on its way, so the sender tries again.
+        bool senderTold = _nodes.TryGetValue(fromId, out MeshNode? sender)
+            && sender.Post(new DeliveryFailed(message, toId));
+
+        if (!senderTold)
+        {
+            ReportDropped(message, fromId, "The ship carrying the message left the network.");
         }
     }
 

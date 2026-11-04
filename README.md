@@ -19,7 +19,7 @@ It will show live ships on a map. Each ship acts as an emulated mesh node, passi
 - [x] Milestone 3, Map: show ships on a live map
 - [x] Milestone 4, Link: draw links between ships in range
 - [x] Milestone 5, Relay: pass messages hop by hop
-- [ ] Milestone 6, Recover: kill a node and reroute
+- [x] Milestone 6, Recover: kill a node and reroute
 - [ ] Milestone 7, Back up: replay saved ship data
 - [ ] Milestone 8, Polish: tests, diagram, and demo video
 

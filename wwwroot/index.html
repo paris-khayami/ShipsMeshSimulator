@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Elbe Ship Traffic</title>
+  <title>Hamburg Port Traffic</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&display=swap">
@@ -12,11 +12,11 @@
 </head>
 <body>
   <main class="layout">
-    <div id="map" role="application" aria-label="Map of ships on the Elbe"></div>
+    <div id="map" role="application" aria-label="Map of ships in the Port of Hamburg"></div>
 
     <aside class="panel">
       <header class="panel-header">
-        <h1>Elbe ship traffic</h1>
+        <h1>Port of Hamburg ship traffic</h1>
         <p id="connection" class="connection" data-state="connecting" role="status">Connecting to the server</p>
       </header>
 
@@ -24,12 +24,15 @@
         <span id="ship-count">No ships yet.</span>
         <span id="latest-report"></span>
         <span id="link-count"></span>
+        <span id="route-summary"></span>
       </p>
-      <p class="source">Ship positions are live AIS reports from aisstream.io. Radio links, routes, and messages are simulated using the real distances between ships.</p>
+      <p class="source">Ship positions are live AIS reports from aisstream.io. Radio links, routes, messages, and killed nodes are simulated using the real distances between ships.</p>
 
       <ul class="legend">
         <li><svg viewBox="0 0 28 28" aria-hidden="true"><path class="hull" d="M14 3 L21 24 L14 20 L7 24 Z"/></svg>Moving ship</li>
         <li><svg viewBox="0 0 28 28" aria-hidden="true"><circle class="legend-moored" cx="14" cy="14" r="5"/></svg>Stopped ship</li>
+        <li><svg viewBox="0 0 28 28" aria-hidden="true"><circle class="legend-moored legend-disconnected" cx="14" cy="14" r="5"/></svg>Disconnected ship</li>
+        <li><svg viewBox="0 0 28 28" aria-hidden="true"><path class="killed-mark" d="M7 7 L21 21 M21 7 L7 21"/></svg>Killed ship</li>
         <li><svg viewBox="0 0 28 28" aria-hidden="true"><rect class="shore" x="7" y="7" width="14" height="14"/></svg>Shore station</li>
         <li><svg viewBox="0 0 28 28" aria-hidden="true"><line class="legend-link" x1="2" y1="14" x2="26" y2="14"/></svg>Simulated radio link</li>
         <li><svg viewBox="0 0 28 28" aria-hidden="true"><line class="legend-route" x1="2" y1="14" x2="26" y2="14"/></svg>Current route to shore</li>
@@ -49,10 +52,15 @@
           <div><dt>Radio links</dt><dd id="selected-links"></dd></div>
           <div><dt>Route to shore</dt><dd id="selected-route"></dd></div>
         </dl>
-        <button id="send-message" type="button">Send message to shore</button>
+        <div class="selected-actions">
+          <button id="send-message" type="button">Send message to shore</button>
+          <button id="kill-node" type="button">Kill node</button>
+        </div>
       </section>
 
       <p id="message-status" class="message-status" role="status"></p>
+
+      <button id="restore-all" class="restore-all" type="button" hidden>Restore all ships</button>
 
       <h2 class="list-title">Ships on the map</h2>
       <p id="empty-message" class="empty">Waiting for ship reports. If none appear within a minute, check the terminal for errors.</p>

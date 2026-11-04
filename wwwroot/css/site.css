@@ -103,6 +103,7 @@ h1 {
 
 #latest-report,
 #link-count,
+#route-summary,
 .source {
   color: var(--ink-soft);
   font-size: 1rem;
@@ -134,6 +135,17 @@ h1 {
   fill: var(--paper);
   stroke: var(--ink);
   stroke-width: 2.5;
+}
+
+.legend-disconnected {
+  opacity: 0.45;
+}
+
+.killed-mark {
+  fill: none;
+  stroke: var(--buoy-red);
+  stroke-width: 3.5;
+  stroke-linecap: round;
 }
 
 .legend-link {
@@ -212,21 +224,64 @@ h1 {
   font-weight: 500;
 }
 
-#send-message {
-  width: 100%;
-  min-height: 2.75rem;
+.selected-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
   margin-top: 0.75rem;
-  border: 0;
+}
+
+.selected-actions button {
+  min-height: 2.75rem;
+  padding: 0.25rem 0.75rem;
   border-radius: 3px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#send-message {
+  border: 0;
   background: var(--paper);
+  color: var(--ink);
+}
+
+#send-message:hover:not(:disabled) {
+  background: var(--sea-deep);
+}
+
+#send-message:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#kill-node {
+  border: 1px solid #ff9aa8;
+  background: transparent;
+  color: #ffd5da;
+}
+
+#kill-node:hover {
+  background: var(--buoy-red);
+  color: #fff;
+}
+
+.restore-all {
+  align-self: flex-start;
+  min-height: 2.75rem;
+  margin: 0.75rem 1.25rem 0;
+  padding: 0 0.75rem;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  background: transparent;
   color: var(--ink);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
 
-#send-message:hover {
-  background: var(--sea-deep);
+.restore-all[hidden] {
+  display: none;
 }
 
 .message-status {
@@ -349,6 +404,24 @@ button:focus-visible {
 .ship-marker.is-selected .hull,
 .ship-marker.is-selected .moored {
   fill: var(--buoy-red);
+}
+
+/* Hidden until a ship is killed. */
+.ship-marker .killed-mark {
+  display: none;
+}
+
+.ship-marker.is-killed .hull,
+.ship-marker.is-killed .moored {
+  display: none;
+}
+
+.ship-marker.is-killed .killed-mark {
+  display: inline;
+}
+
+.ship-marker.is-disconnected .ship-glyph {
+  opacity: 0.45;
 }
 
 .ship-marker:focus-visible {

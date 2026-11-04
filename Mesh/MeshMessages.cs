@@ -17,3 +17,6 @@ public sealed record TickEvent : NodeEvent;
 public sealed record RouteAnnouncement(
     long SenderId, int HopsToShore, long? SenderNextHopId, double SignalPercent) : NodeEvent;
 public sealed record DataReceived(DataMessage Message) : NodeEvent;
+
+/// <summary>A neighbor didn't receive a message this node sent, so it should try another route.</summary>
+public sealed record DeliveryFailed(DataMessage Message, long ToId) : NodeEvent;

@@ -4,6 +4,7 @@
 const GLYPH = `<svg class="ship-glyph" viewBox="0 0 28 28" aria-hidden="true">
   <path class="hull" d="M14 3 L21 24 L14 20 L7 24 Z"/>
   <circle class="moored" cx="14" cy="14" r="5"/>
+  <path class="killed-mark" d="M7 7 L21 21 M21 7 L7 21"/>
 </svg>`;
 
 const SHORE_GLYPH = `<svg class="ship-glyph" viewBox="0 0 28 28" aria-hidden="true">
@@ -42,6 +43,7 @@ let links = [];
 let shore = null;
 let shoreMarker = null;
 let routes = new Map();
+let killedIds = new Set();
 let currentMessageId = null;
 let clearMessageTimer = null;
 
@@ -67,6 +69,11 @@ function secondsSince(time) {
   return Math.max(0, Math.round((Date.now() - new Date(time).getTime()) / 1000));
 }
 
+const isKilled = (ship) => killedIds.has(ship.mmsi);
+
+// A ship's distance from shore, or null if it has no route.
+const hopsToShore = (ship) => routes.get(ship.mmsi)?.hopsToShore ?? null;
+
 // Create or move one ship's marker.
 function updateMarker(ship) {
   let marker = markers.get(ship.mmsi);
@@ -85,8 +92,10 @@ function updateMarker(ship) {
   const markerElement = marker.getElement();
   markerElement.classList.toggle("is-stopped", !isMoving(ship));
   markerElement.classList.toggle("is-selected", ship.mmsi === selectedMmsi);
+  markerElement.classList.toggle("is-killed", isKilled(ship));
+  markerElement.classList.toggle("is-disconnected", !isKilled(ship) && hopsToShore(ship) === null);
   markerElement.querySelector(".ship-glyph")
-    .style.setProperty("--course", `${isMoving(ship) ? ship.courseDegrees : 0}deg`);
+    .style.setProperty("--course", `${isMoving(ship) && !isKilled(ship) ? ship.courseDegrees : 0}deg`);
 }
 
 // Create or update one ship's row in the list. Ship names come from outside this app,
@@ -117,7 +126,7 @@ function updateRow(ship) {
   const button = row.firstElementChild;
   button.setAttribute("aria-pressed", String(ship.mmsi === selectedMmsi));
   button.children[0].textContent = displayName(ship);
-  button.children[1].textContent = formatSpeed(ship);
+  button.children[1].textContent = isKilled(ship) ? "Killed" : formatSpeed(ship);
 }
 
 function removeShip(mmsi) {
@@ -251,6 +260,29 @@ function onMessageDropped(result) {
   clearMessageLater();
 }
 
+// Tell the server about a button press. The next update then shows the result on the map.
+async function callServer(method, argument, successText) {
+  try {
+    await (argument === undefined ? connection.invoke(method) : connection.invoke(method, argument));
+    setMessageStatus(successText, "sending");
+  } catch {
+    setMessageStatus("That didn't work. The connection to the server was lost.", "failed");
+  }
+}
+
+function toggleKilled() {
+  const ship = ships.get(selectedMmsi);
+  if (!ship) {
+    return;
+  }
+
+  if (isKilled(ship)) {
+    callServer("RestoreNode", ship.mmsi, `Restored ${displayName(ship)}. It will rejoin the network shortly.`);
+  } else {
+    callServer("KillNode", ship.mmsi, `Killed ${displayName(ship)}. Its neighbors will notice it has gone quiet.`);
+  }
+}
+
 async function sendMessage() {
   clearTimeout(clearMessageTimer);
   messageLayer.clearLayers();
@@ -265,6 +297,32 @@ async function sendMessage() {
   } catch {
     setMessageStatus("Not sent. The connection to the server was lost.", "failed");
   }
+}
+
+// Sums up how far ships are from shore, to show whether messages really need to hop.
+function describeRoutes() {
+  const counts = new Map();
+  ships.forEach((ship) => {
+    if (isKilled(ship)) {
+      return;
+    }
+    const hops = hopsToShore(ship);
+    counts.set(hops, (counts.get(hops) ?? 0) + 1);
+  });
+
+  const parts = [...counts.keys()]
+    .filter((hops) => hops !== null)
+    .sort((a, b) => a - b)
+    .map((hops) => `${counts.get(hops)} at ${hops} ${hops === 1 ? "hop" : "hops"}`);
+
+  if (counts.has(null)) {
+    parts.push(`${counts.get(null)} disconnected`);
+  }
+  if (killedIds.size > 0) {
+    parts.push(`${killedIds.size} killed`);
+  }
+
+  return parts.length > 0 ? `Routes to shore: ${parts.join(", ")}.` : "";
 }
 
 function countLinks(mmsi) {
@@ -285,10 +343,17 @@ function renderSelection() {
   element("selected-position").textContent = `${ship.latitude.toFixed(4)}, ${ship.longitude.toFixed(4)}`;
   element("selected-links").textContent = countLinks(ship.mmsi);
 
-  const hops = routes.get(ship.mmsi)?.hopsToShore;
-  element("selected-route").textContent = hops === null || hops === undefined
-    ? "No route"
-    : `${hops} ${hops === 1 ? "hop" : "hops"}`;
+  const hops = hopsToShore(ship);
+  if (isKilled(ship)) {
+    element("selected-route").textContent = "Radio off";
+  } else if (hops === null) {
+    element("selected-route").textContent = "Disconnected";
+  } else {
+    element("selected-route").textContent = `${hops} ${hops === 1 ? "hop" : "hops"}`;
+  }
+
+  element("kill-node").textContent = isKilled(ship) ? "Restore node" : "Kill node";
+  element("send-message").disabled = isKilled(ship);
 }
 
 function selectShip(mmsi) {
@@ -335,6 +400,8 @@ function applyUpdate(update) {
   links = update.links;
   shore = update.shore;
   routes = new Map(update.routes.map((route) => [route.nodeId, route]));
+  killedIds = new Set(update.killedIds);
+  element("restore-all").hidden = killedIds.size === 0;
   updateShoreMarker();
   renderLinks();
   renderRoute();
@@ -356,6 +423,7 @@ function applyUpdate(update) {
   element("ship-count").textContent = ships.size === 0
     ? "No ships yet."
     : `Showing ${ships.size} of ${update.totalTracked} ships, moving ships first.`;
+  element("route-summary").textContent = describeRoutes();
   element("link-count").textContent =
     `${links.length} simulated radio links, with a range of ${update.radioRangeKm} km.`;
 
@@ -370,7 +438,7 @@ async function showMapArea() {
     const area = await response.json();
     map.fitBounds([[area.minLatitude, area.minLongitude], [area.maxLatitude, area.maxLongitude]]);
   } catch {
-    map.setView([53.7, 9.35], 9); // The Elbe, if the area can't be loaded.
+    map.setView([53.53, 9.92], 12); // The port, if the area can't be loaded.
   }
 }
 
@@ -408,6 +476,9 @@ async function startConnection() {
 
 element("clear-selection").addEventListener("click", () => selectShip(null));
 element("send-message").addEventListener("click", sendMessage);
+element("kill-node").addEventListener("click", toggleKilled);
+element("restore-all").addEventListener("click", () =>
+  callServer("RestoreAllNodes", undefined, "Restored all ships. They will rejoin the network shortly."));
 map.on("click", () => selectShip(null));
 
 // Keep "Latest report" counting even between updates.

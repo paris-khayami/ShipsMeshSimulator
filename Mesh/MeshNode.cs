@@ -67,6 +67,11 @@ public sealed class MeshNode
                 case DataReceived received:
                     HandleMessage(received.Message);
                     break;
+                case DeliveryFailed failed:
+                    _neighbors.Remove(failed.ToId);
+                    ChooseRoute();
+                    Forward(failed.Message);
+                    break;
             }
         }
     }
@@ -112,11 +117,18 @@ public sealed class MeshNode
             return;
         }
 
-        // Try the best neighbor. If it's out of range now, forget it and try the next best.
+        Forward(updated);
+    }
+
+    /// <summary>
+    /// Tries the best neighbor. If it can't be reached, forgets it and tries the next best.
+    /// </summary>
+    private void Forward(DataMessage message)
+    {
         ChooseRoute();
         while (_route.NextHopId is long nextHop)
         {
-            if (_radio.Transmit(Id, nextHop, updated))
+            if (_radio.Transmit(Id, nextHop, message))
             {
                 return;
             }
@@ -125,7 +137,7 @@ public sealed class MeshNode
             ChooseRoute();
         }
 
-        _radio.ReportDropped(updated, Id, "This ship has no route to shore.");
+        _radio.ReportDropped(message, Id, "This ship has no route to shore.");
     }
 
     private void RemoveSilentNeighbors()

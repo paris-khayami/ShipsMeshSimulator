@@ -18,4 +18,10 @@ public sealed class ShipHub : Hub
 
     /// <summary>Called when someone presses "Send message to shore".</summary>
     public bool SendTestMessage(long mmsi) => _network.SendTestMessage(mmsi);
+
+    public void KillNode(long mmsi) => _network.KillNode(mmsi);
+
+    public void RestoreNode(long mmsi) => _network.RestoreNode(mmsi);
+
+    public void RestoreAllNodes() => _network.RestoreAllNodes();
 }

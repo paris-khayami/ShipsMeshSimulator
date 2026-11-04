@@ -56,13 +56,24 @@ public sealed class ShipBroadcaster : BackgroundService
 
                 IReadOnlyList<Ship> ships = _tracker.GetAll();
                 IReadOnlyList<Ship> shipsOnMap = SelectShipsForMap(ships);
-                IReadOnlyList<RadioLink> links = RadioLinkCalculator.FindLinks(
-                    shipsOnMap, _shore, _meshOptions.RadioRangeKm);
 
-                _network.Sync(shipsOnMap, _shore, links);
+                // Killed ships stay on the map, but their radios can't make links.
+                List<Ship> shipsWithRadios = shipsOnMap
+                    .Where(ship => !_network.IsKilled(ship.Mmsi))
+                    .ToList();
+                IReadOnlyList<RadioLink> links = RadioLinkCalculator.FindLinks(
+                    shipsWithRadios, _shore, _meshOptions.RadioRangeKm);
+
+                _network.Sync(shipsWithRadios, _shore, links);
 
                 var update = new ShipsUpdate(
-                    ships.Count, shipsOnMap, _shore, links, _network.GetRoutes(), _meshOptions.RadioRangeKm);
+                    ships.Count,
+                    shipsOnMap,
+                    _shore,
+                    links,
+                    _network.GetRoutes(),
+                    _network.GetKilledIds(),
+                    _meshOptions.RadioRangeKm);
 
                 try
                 {
