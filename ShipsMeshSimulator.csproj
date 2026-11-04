@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- The name of the private folder on this computer that holds the API key. -->
     <UserSecretsId>ships-mesh-simulator</UserSecretsId>
+    <!-- The tests are a separate project, so leave their files out of this one. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
