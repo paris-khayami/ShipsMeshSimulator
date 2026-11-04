@@ -44,6 +44,7 @@ let shore = null;
 let shoreMarker = null;
 let routes = new Map();
 let killedIds = new Set();
+let dataMode = "Live";
 let currentMessageId = null;
 let clearMessageTimer = null;
 
@@ -377,6 +378,9 @@ function renderStatus() {
   if (!connected) {
     status.dataset.state = "connecting";
     status.textContent = "Reconnecting to the server";
+  } else if (dataMode === "Replay") {
+    status.dataset.state = "replay";
+    status.textContent = "Replay of recorded ship data";
   } else if (latest !== null && latest > STALE_AFTER_SECONDS) {
     status.dataset.state = "stale";
     status.textContent = "Ship feed has gone quiet";
@@ -384,6 +388,17 @@ function renderStatus() {
     status.dataset.state = "live";
     status.textContent = "Live";
   }
+}
+
+function renderDataSource(recordingAvailable) {
+  const isReplay = dataMode === "Replay";
+  element("data-source").textContent = isReplay
+    ? "Ship positions are a recording of real AIS reports, not live data."
+    : "Ship positions are live AIS reports from aisstream.io.";
+
+  const button = element("switch-data");
+  button.hidden = !recordingAvailable;
+  button.textContent = isReplay ? "Use live data" : "Use recorded data";
 }
 
 // Runs each time the server sends the current list of ships.
@@ -401,6 +416,8 @@ function applyUpdate(update) {
   shore = update.shore;
   routes = new Map(update.routes.map((route) => [route.nodeId, route]));
   killedIds = new Set(update.killedIds);
+  dataMode = update.dataMode;
+  renderDataSource(update.recordingAvailable);
   element("restore-all").hidden = killedIds.size === 0;
   updateShoreMarker();
   renderLinks();
@@ -477,6 +494,13 @@ async function startConnection() {
 element("clear-selection").addEventListener("click", () => selectShip(null));
 element("send-message").addEventListener("click", sendMessage);
 element("kill-node").addEventListener("click", toggleKilled);
+element("switch-data").addEventListener("click", () => {
+  if (dataMode === "Replay") {
+    callServer("UseLiveData", undefined, "Switched to live data. Ships will reappear as they report.");
+  } else {
+    callServer("UseRecordedData", undefined, "Switched to recorded data.");
+  }
+});
 element("restore-all").addEventListener("click", () =>
   callServer("RestoreAllNodes", undefined, "Restored all ships. They will rejoin the network shortly."));
 map.on("click", () => selectShip(null));

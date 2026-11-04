@@ -20,7 +20,7 @@ It will show live ships on a map. Each ship acts as an emulated mesh node, passi
 - [x] Milestone 4, Link: draw links between ships in range
 - [x] Milestone 5, Relay: pass messages hop by hop
 - [x] Milestone 6, Recover: kill a node and reroute
-- [ ] Milestone 7, Back up: replay saved ship data
+- [x] Milestone 7, Back up: replay saved ship data
 - [ ] Milestone 8, Polish: tests, diagram, and demo video
 
 ## Run it
@@ -38,6 +38,18 @@ Then start the app and open <http://localhost:5000> in your browser. Press `Ctrl
 ```
 dotnet run
 ```
+
+## Record and replay ship data
+
+The app switches to a recording if the live feed is silent for a minute or if there's no API key. You can also switch by hand on the page.
+
+To make a new recording from the live feed, run this and leave it for 15 minutes:
+
+```
+dotnet run -- --Recording:Enabled=true
+```
+
+The file is saved only once the 15 minutes are up, so stopping early keeps any previous recording.
 
 ## How it was built
 

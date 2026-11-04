@@ -7,6 +7,10 @@ obj/
 .vs/
 .vscode/
 
+# Recorded ship data, kept private until its terms have been checked
+recordings/
+*.tmp
+
 # Secrets: the API key must never be committed
 .env
 secrets.json

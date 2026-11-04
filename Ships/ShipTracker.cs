@@ -13,6 +13,8 @@ public sealed class ShipTracker
 
     public int Count => _ships.Count;
 
+    public void Clear() => _ships.Clear();
+
     /// <summary>Adds a new ship, or replaces what we know about one we've already seen.</summary>
     public void Update(Ship update)
     {

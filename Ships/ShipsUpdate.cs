@@ -10,4 +10,6 @@ public sealed record ShipsUpdate(
     IReadOnlyList<RadioLink> Links,
     IReadOnlyList<NodeRoute> Routes,
     IReadOnlyList<long> KilledIds,
-    double RadioRangeKm);
+    double RadioRangeKm,
+    string DataMode,
+    bool RecordingAvailable);

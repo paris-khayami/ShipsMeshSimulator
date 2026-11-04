@@ -17,10 +17,21 @@ builder.Configuration.AddUserSecrets<Program>(optional: true);
 builder.Services.Configure<AisStreamOptions>(builder.Configuration.GetSection("AisStream"));
 builder.Services.Configure<TrackingOptions>(builder.Configuration.GetSection("Tracking"));
 builder.Services.Configure<MeshOptions>(builder.Configuration.GetSection("Mesh"));
+builder.Services.Configure<RecordingOptions>(builder.Configuration.GetSection("Recording"));
 
 // Singleton means the whole app shares one ShipTracker, so every part sees the same ships.
 builder.Services.AddSingleton<ShipTracker>();
 builder.Services.AddSingleton<MeshNetwork>();
+builder.Services.AddSingleton<ShipFeed>();
+builder.Services.AddSingleton<ShipRecorder>();
+
+// The recording's location is relative to the project folder.
+builder.Services.AddSingleton(services =>
+{
+    var options = services.GetRequiredService<IOptions<RecordingOptions>>().Value;
+    var environment = services.GetRequiredService<IWebHostEnvironment>();
+    return new ShipRecording(Path.Combine(environment.ContentRootPath, options.FilePath));
+});
 
 // SignalR keeps a live connection open so the server can push updates to the browser.
 builder.Services.AddSignalR();
@@ -28,6 +39,8 @@ builder.Services.AddSignalR();
 // Run these in the background for as long as the app is running.
 builder.Services.AddHostedService<AisStreamClient>();
 builder.Services.AddHostedService<ShipBroadcaster>();
+builder.Services.AddHostedService<ShipReplayer>();
+builder.Services.AddHostedService(services => services.GetRequiredService<ShipRecorder>());
 builder.Services.AddHostedService(services => services.GetRequiredService<MeshNetwork>());
 
 var app = builder.Build();

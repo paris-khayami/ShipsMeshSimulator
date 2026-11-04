@@ -87,6 +87,10 @@ h1 {
   color: var(--amber);
 }
 
+.connection[data-state="replay"] {
+  color: var(--amber);
+}
+
 .connection[data-state="stale"] {
   color: var(--buoy-red);
 }

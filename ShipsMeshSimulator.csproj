@@ -8,4 +8,9 @@
     <UserSecretsId>ships-mesh-simulator</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Include the recording when the app is published to a server. -->
+    <Content Include="recordings\**" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

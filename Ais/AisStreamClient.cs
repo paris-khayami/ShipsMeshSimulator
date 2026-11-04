@@ -6,7 +6,7 @@ using ShipsMeshSimulator.Ships;
 namespace ShipsMeshSimulator.Ais;
 
 /// <summary>
-/// Keeps a live connection to aisstream.io and passes each ship position to the ShipTracker.
+/// Keeps a live connection to aisstream.io and passes each ship position to the ShipFeed.
 /// BackgroundService means this runs alongside the rest of the app until the app stops.
 /// </summary>
 public sealed class AisStreamClient : BackgroundService
@@ -24,7 +24,7 @@ public sealed class AisStreamClient : BackgroundService
     private readonly AisStreamOptions _options;
     private readonly ILogger<AisStreamClient> _logger;
     private readonly IHostApplicationLifetime _lifetime;
-    private readonly ShipTracker _tracker;
+    private readonly ShipFeed _feed;
 
     // How many connection attempts have failed in a row.
     private int _failedAttempts;
@@ -33,18 +33,24 @@ public sealed class AisStreamClient : BackgroundService
         IOptions<AisStreamOptions> options,
         ILogger<AisStreamClient> logger,
         IHostApplicationLifetime lifetime,
-        ShipTracker tracker)
+        ShipFeed feed)
     {
         _options = options.Value;
         _logger = logger;
         _lifetime = lifetime;
-        _tracker = tracker;
+        _feed = feed;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
+            if (_feed.SetMode(ShipDataMode.Replay))
+            {
+                _logger.LogWarning("No API key found, so the app is playing the recording.");
+                return;
+            }
+
             _logger.LogError(
                 "No API key found. Run this in the project folder, then start the app again: " +
                 "dotnet user-secrets set \"AisStream:ApiKey\" \"YOUR_KEY\"");
@@ -200,7 +206,7 @@ public sealed class AisStreamClient : BackgroundService
         }
     }
 
-    /// <summary>Turns a feed message into a Ship and gives it to the tracker.</summary>
+    /// <summary>Turns a feed message into a Ship and gives it to the ShipFeed.</summary>
     private void TrackShip(AisEnvelope envelope)
     {
         PositionReport? report = envelope.Message?.PositionReport;
@@ -213,7 +219,7 @@ public sealed class AisStreamClient : BackgroundService
             return;
         }
 
-        _tracker.Update(new Ship(
+        _feed.ReportLive(new Ship(
             Mmsi: metaData.MMSI,
             // Ship names are padded with spaces and are sometimes empty.
             Name: metaData.ShipName?.Trim() ?? "",

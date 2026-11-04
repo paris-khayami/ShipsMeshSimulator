@@ -10,10 +10,12 @@ namespace ShipsMeshSimulator.Ships;
 public sealed class ShipHub : Hub
 {
     private readonly MeshNetwork _network;
+    private readonly ShipFeed _feed;
 
-    public ShipHub(MeshNetwork network)
+    public ShipHub(MeshNetwork network, ShipFeed feed)
     {
         _network = network;
+        _feed = feed;
     }
 
     /// <summary>Called when someone presses "Send message to shore".</summary>
@@ -24,4 +26,8 @@ public sealed class ShipHub : Hub
     public void RestoreNode(long mmsi) => _network.RestoreNode(mmsi);
 
     public void RestoreAllNodes() => _network.RestoreAllNodes();
+
+    public bool UseLiveData() => _feed.SetMode(ShipDataMode.Live);
+
+    public bool UseRecordedData() => _feed.SetMode(ShipDataMode.Replay);
 }

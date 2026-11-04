@@ -20,6 +20,7 @@ public sealed class ShipBroadcaster : BackgroundService
     private readonly MeshOptions _meshOptions;
     private readonly ShoreStation _shore;
     private readonly MeshNetwork _network;
+    private readonly ShipFeed _feed;
     private readonly ILogger<ShipBroadcaster> _logger;
 
     public ShipBroadcaster(
@@ -28,6 +29,7 @@ public sealed class ShipBroadcaster : BackgroundService
         IOptions<TrackingOptions> options,
         IOptions<MeshOptions> meshOptions,
         MeshNetwork network,
+        ShipFeed feed,
         ILogger<ShipBroadcaster> logger)
     {
         _tracker = tracker;
@@ -35,6 +37,7 @@ public sealed class ShipBroadcaster : BackgroundService
         _options = options.Value;
         _meshOptions = meshOptions.Value;
         _network = network;
+        _feed = feed;
         _shore = new ShoreStation(
             ShoreStation.NodeId,
             _meshOptions.ShoreName,
@@ -73,7 +76,9 @@ public sealed class ShipBroadcaster : BackgroundService
                     links,
                     _network.GetRoutes(),
                     _network.GetKilledIds(),
-                    _meshOptions.RadioRangeKm);
+                    _meshOptions.RadioRangeKm,
+                    _feed.Mode.ToString(),
+                    _feed.RecordingAvailable);
 
                 try
                 {
