@@ -6,6 +6,10 @@ Each ship acts as an independent network node. Ships pass messages to a shore st
 
 Built with C#, ASP.NET Core, SignalR, Leaflet, and OpenStreetMap.
 
+**Live demo:** <http://89.106.206.45:5000/>
+
+Everyone viewing the demo shares one network, so if someone kills a ship, all viewers see it. Use **Restore all ships** to bring killed ships back.
+
 ## What's real and what's simulated
 
 This project simulates the network. It doesn't use real radios, and these ships aren't really connected to each other.
